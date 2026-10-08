@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auditoría especializada · Informes</title>
+<style>
+:root{--bg:#f4efe6;--ink:#1c1915;--muted:#5c5348;--card:#fffdf8;--line:#e4d8c8;--accent:#b45309;--accent2:#1f4e46;--ok:#166534;--bad:#9f1239;--soft:#f7f1e7;--shadow:0 10px 30px rgba(60,40,10,.08)}
+html[data-theme="dark"]{--bg:#161310;--ink:#f4efe6;--muted:#cbbba6;--card:#221c17;--line:#3a3128;--accent:#f0a05a;--accent2:#8fd0c4;--ok:#86efac;--bad:#fda4af;--soft:#2a231c;--shadow:0 10px 30px rgba(0,0,0,.35)}
+*{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Iowan Old Style",Palatino,serif;overflow-x:hidden}body{min-height:100vh}button{font-family:inherit}
+.top{position:sticky;top:0;z-index:20;display:flex;gap:.6rem;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:.7rem 1rem;background:var(--card);border-bottom:1px solid var(--line)}
+.brand{font-weight:700;font-size:1.05rem}.brand small{display:block;font-weight:500;color:var(--muted);font-size:.78rem}
+.tools{display:flex;gap:.4rem;flex-wrap:wrap}button{border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:999px;padding:.45rem .8rem;cursor:pointer}
+button.primary{background:var(--accent);color:#fff;border-color:transparent}html[data-theme="dark"] button.primary{color:#1c1915}button:disabled{opacity:.5;cursor:not-allowed}
+main{max-width:860px;margin:0 auto;padding:1.1rem 1rem 3rem}h1{font-size:clamp(1.6rem,4vw,2.4rem);line-height:1.15;margin:.2rem 0 .4rem}h2{font-size:1.25rem}h3{font-size:1.05rem;margin:1rem 0 .3rem}p,li{line-height:1.55}.muted{color:var(--muted)}
+.grid{display:grid;gap:.8rem}@media(min-width:720px){.grid.cards{grid-template-columns:1fr 1fr 1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1rem;box-shadow:var(--shadow)}
+.cover-art,.mod-art{width:100%;max-width:100%;height:auto;display:block;border-radius:12px;margin:.4rem 0 .4rem}
+.figcap{font-size:.78rem;color:var(--muted);margin:0 0 .8rem}.progress{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin:.4rem 0 1rem}.progress span{display:block;height:100%;background:var(--accent2)}
+.q{border-top:1px solid var(--line);padding-top:.8rem;margin-top:.8rem}.opts{display:flex;flex-direction:column;gap:.4rem}.opts button{text-align:left;border-radius:12px}
+.fb{margin-top:.45rem;padding:.6rem .7rem;border-radius:10px;background:var(--soft)}.fb.ok{outline:1px solid var(--ok)}.fb.bad{outline:1px solid var(--bad)}
+.score{font-size:1.4rem}.navmods{display:flex;gap:.4rem;flex-wrap:wrap;margin:.6rem 0 1rem}.navmods button[aria-current="true"]{outline:2px solid var(--accent)}
+.act{border:1px solid var(--accent);background:var(--card);border-radius:14px;padding:.8rem .9rem;margin:1rem 0}.act h3{margin-top:0}.hidden{display:none}ul{padding-left:1.1rem}table{width:100%;border-collapse:collapse;font-size:.92rem}td,th{border:1px solid var(--line);padding:.4rem;vertical-align:top}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Profesor Sergio Tertusio<small>Auditoría especializada · educación universitaria</small></div>
+  <div class="tools"><button id="menuBtn" type="button">Menú</button><button id="themeBtn" type="button">Modo oscuro</button><button id="resetBtn" type="button">Reiniciar</button></div>
+</header>
+<main id="app"></main>
+<script>
+const THEME_KEY="ae5-theme";
+const keys={l1:"ae5-prog-l1",l2:"ae5-prog-l2",l3:"ae5-prog-l3"};
+const state={view:"menu",reading:null,module:0};
+function loadProg(id){try{return JSON.parse(localStorage.getItem(keys[id])||"{}")}catch(e){return {}}}
+function saveProg(id,data){localStorage.setItem(keys[id],JSON.stringify(data))}
+function themeInit(){const t=localStorage.getItem(THEME_KEY)||"light";document.documentElement.dataset.theme=t;document.getElementById("themeBtn").textContent=t==="dark"?"Modo claro":"Modo oscuro"}
+document.getElementById("themeBtn").onclick=()=>{const n=document.documentElement.dataset.theme==="dark"?"light":"dark";document.documentElement.dataset.theme=n;localStorage.setItem(THEME_KEY,n);themeInit()};
+document.getElementById("menuBtn").onclick=()=>{state.view="menu";state.reading=null;render()};
+document.getElementById("resetBtn").onclick=()=>{if(!confirm("¿Borrar el avance de las tres lecturas de informes? El modo claro u oscuro se conserva."))return;Object.values(keys).forEach(k=>localStorage.removeItem(k));state.view="menu";state.reading=null;render()};
+function svgCover(label){return `<svg class="cover-art" viewBox="0 0 640 220" role="img" aria-label="${label}"><rect width="640" height="220" rx="16" fill="#1f4e46"/><text x="32" y="78" fill="#f4efe6" font-size="28" font-family="Georgia,serif">${label}</text><text x="32" y="118" fill="#f0a05a" font-size="16" font-family="Georgia,serif">Ilustración original · no añade datos</text><rect x="430" y="50" width="150" height="120" rx="12" fill="#f4efe6"/><path d="M470 120h70M505 90v60" stroke="#1f4e46" stroke-width="8"/></svg>`}
+function svgDoc(caption){return `<svg class="mod-art" viewBox="0 0 640 180" role="img" aria-label="${caption}"><rect width="640" height="180" rx="16" fill="#efe4d4"/><rect x="36" y="28" width="200" height="124" rx="8" fill="#fffdf8" stroke="#1f4e46"/><text x="52" y="64" fill="#1c1915" font-size="16" font-family="Georgia,serif">${caption}</text><text x="260" y="80" fill="#5c5348" font-size="15" font-family="Georgia,serif">Esquema de la lectura</text></svg>`}
+const readings={
+l1:{title:"Lectura 5.1 · Comunicación de debilidades",short:"Carta a la gerencia y comités",cap:"Ilustración original. No reproduce logos ni páginas del PDF.",cover:svgCover("NIA 260 y NIA 265"),modules:[
+{id:"m1",title:"Qué se comunica",art:svgDoc("NIA 265"),cap:"La imagen nombra la NIA 265, citada en la lectura como marco de la comunicación de deficiencias.",html:`<p>El objetivo de la lectura es comunicar a la alta dirección las debilidades de control interno halladas en el trabajo. Esa comunicación sirve al objetivo del auditor: informar sobre la razonabilidad de los procesos evaluados, incluida la información financiera.</p><p>Los informes de control interno, también llamados carta a la gerencia, permiten a los responsables de los controles decidir las acciones correctivas. El auditor hace seguimiento a los planes de mejora para cerrar la brecha entre objetivos y resultados del periodo.</p><p>La NIA 260 (IASB, 2016) admite que la comunicación de hallazgos pida información adicional a la dirección para completar la evidencia, y que el auditor valide si la dirección comparte el punto de vista sobre hechos o transacciones.</p>`},
+{id:"m2",title:"Carta a la gerencia",art:svgDoc("Cinco aspectos"),cap:"La imagen resume los cinco aspectos de la carta a la gerencia según esta lectura.",html:`<p>La NIA 265 (IASB, 2016) pide comunicar a los responsables de la dirección las deficiencias de control interno y los ajustes y reclasificaciones que, a juicio del auditor, merezcan su atención.</p><p>La comunicación escrita de deficiencias significativas incluye: descripción y posibles efectos; contexto suficiente; que el propósito es opinar sobre la razonabilidad de los estados financieros o procesos; que se consideró el control interno relevante para diseñar procedimientos; y que no se opina sobre la eficacia del control interno. Solo se informan deficiencias identificadas en la auditoría.</p><p>La carta a la gerencia reúne los hallazgos con cinco aspectos: condición, criterio, causa, efecto y recomendaciones, más la lista de ajustes y reclasificaciones. Si la dirección no solventa una deficiencia, la NIA 265 indica seguirla e incluirla de nuevo en cartas posteriores. Si rechaza ajustes o reclasificaciones, puede obligar a un informe con salvedad.</p>`},
+{id:"m3",title:"Alta dirección y comités",art:svgDoc("IFAC 2020"),cap:"La imagen nombra a la IFAC (2020), fuente de los seis aspectos del comité de auditoría.",html:`<p>La carta y la lista de ajustes se presentan a la alta dirección y a los comités de auditoría, administración o dirección. El comité de auditoría supervisa el riesgo, se relaciona con auditores externos, salvaguarda controles y vigila la información financiera.</p><p>La IFAC (2020) pide comités vigilantes, ágiles, disciplinados y comprometidos, y señala seis aspectos: mantenerse informado; comunicarse y colaborar; aprovechar la experiencia; promover la mejora continua; pensar de manera integral; adoptar la tecnología. La tecnología facilita el trabajo remoto, pero no sustituye la interacción humana.</p><p>El comité de administración o dirección evalúa metas, riesgos, mitigación, recomendaciones de la junta y de los líderes de procesos, la estructura financiera y los resultados de auditoría interna y externa, y puede autorizar ajustes. La lectura prefiere reuniones mensuales.</p><p>La conclusión: no incorporar las sugerencias puede llevar a un informe modificado por alguna salvedad.</p>`}
+]},
+l2:{title:"Lectura 5.2 · Estructura del informe",short:"Partes del informe interno y externo",cap:"Ilustración original. No reproduce las figuras del PDF.",cover:svgCover("NIA 700 y NIA 800"),modules:[
+{id:"m1",title:"Dos marcos",art:svgDoc("IAI 2017"),cap:"La imagen nombra al IAI (2017), citado para el informe de auditoría interna.",html:`<p>El objetivo es conocer la estructura para opinar tanto sobre controles internos como sobre la razonabilidad de la información financiera. El informe debe ser preciso, claro, objetivo y reflejar la situación y las acciones para solventar debilidades.</p><p>Los informes de auditoría interna y las cartas a la gerencia del auditor externo son similares. El informe de auditoría externa que expresa la opinión se describe aparte.</p><p>En auditoría interna, el IAI (2017) exige objetivo, alcance y resultados, y que el informe sea preciso, objetivo, claro, conciso, constructivo, completo y oportuno. En auditoría externa, las NIA 700 y 800 (IASB, 2016) piden indicar que la información es relevante, fiable, comparable y comprensible, que la empresa prepara los estados y que el auditor audita según las NIA.</p>`},
+{id:"m2",title:"Antecedentes, objetivo y alcance",art:svgDoc("NIEPAI 2210"),cap:"La imagen nombra la NIEPAI 2210 (2017), citada para el objetivo del trabajo interno.",html:`<p>Los antecedentes, según la Real Academia Española (2022), son la acción, dicho o circunstancia que sirve para comprender hechos posteriores. Los aspectos preliminares son datos o estadísticas. En el informe interno van en la introducción. En el externo, en la nota explicativa n.º 1: razón social, identificación fiscal, objeto, productos, registro y fecha de constitución.</p><p>El objetivo indica el propósito. La NIEPAI 2210 (2017) pide objetivos por trabajo, evaluación preliminar de riesgos y consideración de fraude, error o incumplimiento. En auditoría financiera, las NIA (2016) sitúan el objetivo en opinar sobre la razonabilidad de los estados en conjunto.</p><p>El alcance indica el periodo y la extensión de las pruebas. La NIEPAI 2220 (IASB, 2017) exige un alcance suficiente para los objetivos. En la auditoría financiera externa se muestran cifras comparativas del año auditado y el anterior, e indicar si el anterior lo auditó otro profesional.</p>`},
+{id:"m3",title:"Hallazgo, recomendación y plan",art:svgDoc("Cuatro elementos"),cap:"La imagen recoge los cuatro elementos del hallazgo según esta lectura, no los cinco de la carta en la 5.1.",html:`<p>Esta lectura dice que el hallazgo, igual en el informe interno y en la carta a la gerencia, contiene cuatro elementos: condición, criterio, causa y efecto. El ejemplo de equipos de pesaje sin certificación de calibración separa el incumplimiento, el procedimiento, la causa declarada por el jefe de almacén y el efecto sobre la confiabilidad.</p><p>Las recomendaciones sugieren cómo mejorar lo encontrado. Los planes de acción acuerdan acciones correctivas, responsable y fecha compromiso. Después el auditor verifica que los controles mejoraron y que los riesgos se administran.</p><p>El informe es el producto final del aseguramiento. Debe cumplir el marco aplicable, interno o externo, para que la dirección decida mejorar o sostener la situación.</p>`}
+]},
+l3:{title:"Lectura 5.3 · Informe interno e informe externo",short:"Decálogo, modelo y opinión",cap:"Ilustración original. No copia el modelo del PDF.",cover:svgCover("NIA 700"),modules:[
+{id:"m1",title:"Para qué sirve cada informe",art:svgDoc("NIEPAI y NIA"),cap:"La imagen nombra los dos marcos de la lectura: NIEPAI y NIA.",html:`<p>El informe interno se conoce según las NIEPAI; el externo, según las NIA. La auditoría interna genera valor al verificar la eficacia de controles, la gestión de riesgos y el gobierno, de manera sistemática. Informa oportunidades de mejora a los dueños del proceso y a la alta dirección.</p><p>La auditoría externa opina sobre la razonabilidad del área o proceso; en el marco de las NIA, sobre la información financiera de un periodo, comparada con el anterior. El informe limpio o favorable sirve de base para adaptar los otros tipos de opinión.</p>`},
+{id:"m2",title:"Decálogo y modelo interno",art:svgDoc("Auditool 2016"),cap:"La imagen nombra a Auditool (2016), fuente del decálogo de esta lectura.",html:`<p>Auditool (2016) propone diez características: causa y efecto hasta la causa raíz; frases que construyen, sin despectivas; cuantificar el impacto; decir quién, cuándo, cómo, dónde y cuánto, sin nombres de trabajadores; asociar riesgos a los de la organización; recomendaciones en tiempo razonable; planes con fecha y responsable; presentar primero al dueño del proceso; ordenar de mayor a menor impacto; ser breve y concreto.</p><p>El modelo va dirigido, en el ejemplo, al gerente de tecnología, y recorre objetivo, alcance, antecedentes, resultados, recomendaciones y planes. El primer resultado es la creación del código de proveedor sin soporte; el segundo, un bien recibido sin entrada en sistema.</p>`},
+{id:"m3",title:"Opinión externa y secciones",art:svgDoc("NIA 700"),cap:"La imagen nombra la NIA 700 (IASB, 2016), citada para las secciones del informe externo.",html:`<p>Tres tipos de opinión: limpia o favorable, si los estados presentan fielmente la situación; con salvedad, que incluye «excepto por»; abstención, cuando el auditor declara que no opina.</p><p>La NIA 700 (IASB, 2016) pide secciones tituladas: título de auditor independiente; destinatario; opinión, con una de las dos frases de imagen fiel o presentación fiel en todos los aspectos materiales; fundamento, con cumplimiento de las NIA, independencia y evidencia suficiente; cuestiones clave en entidades cotizadas; responsabilidades de la dirección, incluida la empresa en funcionamiento; responsabilidades del auditor; nombre del socio; firma; dirección; fecha no anterior a la evidencia suficiente.</p><p>El auditor obtiene conocimiento del control interno para diseñar procedimientos, no para opinar sobre su eficacia. La conclusión exige declarar el marco, la ética, los controles y los riesgos de fraude y error. La declaración goza de fe pública.</p>`}
+]}
+};
+const moduleActs={
+l1:[
+{q:"Según la NIA 260 de esta lectura, la comunicación de hallazgos puede servir para…",opts:["Sustituir la opinión sobre los estados","Pedir información adicional y completar la evidencia","Opinar sobre la eficacia del control interno"],a:1,why:"La lectura dice que puede incluir la solicitud de información adicional para completar la evidencia."},
+{q:"¿Cuántos aspectos debe cumplir cada hallazgo de la carta a la gerencia en esta lectura?",opts:["Tres: condición, causa y efecto","Cinco: condición, criterio, causa, efecto y recomendaciones","Solo la recomendación"],a:1,why:"La lectura enumera esos cinco aspectos y, además, la lista de ajustes y reclasificaciones."},
+{q:"Si la dirección no solventa una deficiencia de control, ¿qué indica la NIA 265 aquí?",opts:["Omitirla en lo sucesivo","Incluirla de nuevo en la carta de próximas oportunidades","Emitir siempre abstención"],a:1,why:"La lectura dice que el auditor le hace seguimiento y la incluye otra vez. La salvedad se vincula al rechazo de ajustes."}
+],
+l2:[
+{q:"¿Qué caracteriza al informe de auditoría interna según el IAI (2017) en esta lectura?",opts:["Preciso, objetivo, claro, conciso, constructivo, completo y oportuno","Solo la frase «excepto por»","La nota 1 de constitución"],a:0,why:"Esas son las características que la lectura atribuye a las normas del Instituto de Auditores Internos."},
+{q:"En el informe externo, ¿dónde se ubican en general los antecedentes?",opts:["En la nota explicativa n.º 1","Solo en el plan de acción","En la firma del socio"],a:0,why:"La lectura los sitúa en la nota 1: razón social, objeto, registro y constitución, entre otros datos."},
+{q:"Esta lectura resume el hallazgo en cuatro elementos. ¿Cuáles deja fuera de esa lista?",opts:["La recomendación, que trata en otra sección","La condición","La causa"],a:0,why:"Enumera condición, criterio, causa y efecto. Las recomendaciones y los planes van después."}
+],
+l3:[
+{q:"Según Auditool (2016), la descripción de la situación observada…",opts:["Debe nombrar a los trabajadores","Especifica quién, cuándo, cómo, dónde y cuánto, sin nombres de trabajadores","Omite el cuánto"],a:1,why:"El punto 4 del decálogo lo dice así."},
+{q:"La opinión con salvedad, en esta lectura, incluye la expresión…",opts:["«No opina»","«Excepto por»","«Empresa en funcionamiento»"],a:1,why:"La salvedad usa «excepto por». «No opina» corresponde a la abstención."},
+{q:"¿Para qué obtiene el auditor conocimiento del control interno, según la NIA 700 aquí?",opts:["Para opinar sobre su eficacia","Para diseñar procedimientos adecuados a las circunstancias","Para sustituir la responsabilidad de la dirección"],a:1,why:"La lectura dice que no es para expresar una opinión sobre la eficacia del control interno."}
+]
+};
+function quizOf(id){
+if(id==="l1") return [
+{t:"tf",q:"La carta a la gerencia también se llama informe de control interno.",a:true,why:"La lectura los presenta como nombres del mismo informe."},
+{t:"mc",q:"La NIA 265 pide comunicar deficiencias que…",opts:["El auditor identifique y que merezcan atención","Cualquier debilidad histórica, aunque no se haya visto","Solo las del comité de administración"],a:0,why:"Deben tener importancia suficiente para la atención de la dirección y limitarse a lo identificado."},
+{t:"tf",q:"El fin de la auditoría, según esta comunicación, es opinar sobre la eficacia del control interno.",a:false,why:"La lectura pide dejar claro que ese no es el fin."},
+{t:"mc",q:"Discutir el hallazgo con el área afectada sirve para…",opts:["Definir con ellos las acciones correctivas","Evitar la carta a la gerencia","Fijar el objeto social"],a:0,why:"La lectura recomienda esa discusión para conocer la situación y definir acciones."},
+{t:"tf",q:"Rechazar ajustes o reclasificaciones puede obligar a un informe con salvedad.",a:true,why:"Así lo plantea la lectura, distinto del seguimiento de una deficiencia no solventada."},
+{t:"mc",q:"Un propósito del comité de auditoría, en esta lectura, es…",opts:["La vigilancia de la información financiera","Aprobar el objeto social","Sustituir al auditor"],a:0,why:"También supervisa el riesgo, se relaciona con auditores externos y salvaguarda controles."},
+{t:"tf",q:"La IFAC (2020) enumera seis aspectos para el funcionamiento de los comités de auditoría.",a:true,why:"Informado, colaborar, experiencia, mejora continua, visión integral y tecnología."},
+{t:"mc",q:"El comité de administración, según la lectura, se reúne…",opts:["Con frecuencia mensual, de preferencia","Solo al emitir la opinión","Cada cinco años"],a:0,why:"Para seguir y corregir, considerando los cambios del entorno."},
+{t:"tf",q:"Adoptar la tecnología, según la IFAC (2020), vuelve innecesaria la interacción humana.",a:false,why:"La lectura dice que la tecnología facilita, pero el comité debe recordar el valor de esa interacción."},
+{t:"mc",q:"No incluir las sugerencias de la auditoría podría conllevar…",opts:["Un informe modificado por alguna salvedad","La eliminación de la NIA 260","Un informe sin destinatario"],a:0,why:"Es la conclusión de la lectura."}
+];
+if(id==="l2") return [
+{t:"tf",q:"Los informes internos y las cartas a la gerencia del auditor externo son similares, según esta lectura.",a:true,why:"Lo dice al contrastarlos con el informe de opinión externa."},
+{t:"mc",q:"El informe externo de esta lectura se elabora con las NIA…",opts:["700 y 800","260 solamente","2210"],a:0,why:"La lectura cita las NIA 700 y 800 para ese informe."},
+{t:"tf",q:"Antecedente, según la RAE (2022) citada, es lo que sirve para comprender hechos posteriores.",a:true,why:"Acción, dicho o circunstancia con ese fin."},
+{t:"mc",q:"El objetivo de una auditoría financiera, en esta lectura, es…",opts:["Opinar sobre la razonabilidad de los estados en conjunto","Certificar la eficacia del control interno","Fijar el plazo de crédito"],a:0,why:"Así lo indican las NIA (2016) en el apartado de objetivo."},
+{t:"tf",q:"El alcance solo nombra al auditor, no el periodo.",a:false,why:"Indica el periodo bajo revisión y la extensión de las pruebas."},
+{t:"mc",q:"Si el año anterior lo auditó otro profesional, la lectura pide…",opts:["Indicar esa situación en una sección del informe","Omitir las cifras comparativas","Convertir la opinión en abstención"],a:0,why:"Las cifras comparativas se muestran y se aclara quién auditó el año anterior."},
+{t:"tf",q:"El ejemplo de equipos de pesaje atribuye la causa a la falta de recursos declarada por el jefe de almacén.",a:true,why:"Es la causa del ejemplo de hallazgo."},
+{t:"mc",q:"El plan de acción debe indicar…",opts:["La fecha compromiso de ejecución","Solo el título del informe","La nota 1"],a:0,why:"Acciones acordadas, responsable y fecha compromiso; luego el auditor hace seguimiento."},
+{t:"tf",q:"Esta lectura pone la recomendación dentro de los cuatro elementos del hallazgo.",a:false,why:"Los cuatro son condición, criterio, causa y efecto. La recomendación va en otra sección."},
+{t:"mc",q:"El informe es, en la conclusión…",opts:["El producto final del trabajo de aseguramiento","Un papel de trabajo interno sin destinatario","La planificación estratégica"],a:0,why:"Lo elabora el auditor con juicio, escepticismo y criterio ético, según el marco aplicable."}
+];
+return [
+{t:"tf",q:"La auditoría interna, en esta lectura, verifica controles, riesgos y gobierno para generar valor.",a:true,why:"Ese es el propósito que abre la lectura."},
+{t:"mc",q:"El punto 8 del decálogo de Auditool (2016) pide presentar los resultados…",opts:["Primero al dueño del proceso","Solo a los accionistas","Después de la opinión externa"],a:0,why:"Antes del comité de auditoría o de los niveles superiores."},
+{t:"tf",q:"El informe interno debe nombrar a los trabajadores involucrados.",a:false,why:"El punto 4 pide quién, cuándo, cómo, dónde y cuánto, sin nombres de trabajadores."},
+{t:"mc",q:"En el modelo, el código de proveedor se creó sin soporte porque…",opts:["No se contaba con el contralor de compras tras su renuncia","La NIA 700 lo permite","El comité adoptó la tecnología"],a:0,why:"Así lo explica el resultado 1 del modelo."},
+{t:"tf",q:"La opinión limpia indica que los estados presentan fielmente la situación financiera.",a:true,why:"Es la definición de esta lectura."},
+{t:"mc",q:"La abstención de opinión significa que el auditor…",opts:["Declara que no opina","Usa «excepto por»","Certifica el control interno"],a:0,why:"La salvedad es la que usa «excepto por»."},
+{t:"tf",q:"Las cuestiones clave de la auditoría se comunican, en esta lectura, en entidades cotizadas.",a:true,why:"La NIA 700 las sitúa en auditorías de estados con fines generales de entidades cotizadas."},
+{t:"mc",q:"La fecha del informe externo…",opts:["No será anterior a la evidencia suficiente y adecuada","Puede ser cualquiera","Es la de constitución de la empresa"],a:0,why:"Así lo exige la sección de fecha de la NIA 700 en la lectura."},
+{t:"tf",q:"Conocer el control interno sirve, según esta lectura, para opinar sobre su eficacia.",a:false,why:"Sirve para diseñar procedimientos, no para esa opinión."},
+{t:"mc",q:"La declaración del auditor, al cierre de la lectura…",opts:["Goza de fe pública para decidir","Sustituye los estados financieros","Omite la ética"],a:0,why:"Además debe declarar marco, ética, controles y riesgos de fraude y error."}
+];
+}
+Object.keys(readings).forEach(id=>readings[id].quiz=quizOf(id));
+function render(){
+const app=document.getElementById("app");
+if(state.view==="menu"){
+app.innerHTML=`<h1>Auditoría especializada</h1><p class="muted">Educación universitaria. Profesor Sergio Tertusio. Informes: tres lecturas para comprender la comunicación y la estructura, no para memorizar listas. El avance de cada una se guarda aparte.</p><div class="grid cards">`+Object.keys(readings).map(id=>{const r=readings[id];const p=loadProg(id);const n=p.modules?Object.keys(p.modules).length:0;return `<article class="card"><h3>${r.title}</h3><p>${r.short}</p><div class="progress" aria-hidden="true"><span style="width:${Math.round(n/3*100)}%"></span></div><p class="muted">${n} de 3 módulos vistos${p.quiz&&p.quiz.done?" · cuestionario hecho":""}</p><button class="primary" type="button" data-open="${id}">Abrir</button></article>`}).join("")+`</div>`;
+app.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>openReading(b.dataset.open));
+return;
+}
+const r=readings[state.reading];const p=loadProg(state.reading);
+if(state.view==="quiz"){renderQuiz(r,p);return}
+const m=r.modules[state.module];
+app.innerHTML=`<p class="muted">${r.title}</p><h1>${m.title}</h1><div class="navmods">${r.modules.map((mod,i)=>`<button type="button" data-mod="${i}" ${i===state.module?'aria-current="true"':""}>${i+1}. ${mod.title}</button>`).join("")}<button type="button" id="toQuiz">Cuestionario</button></div>${state.module===0?r.cover+`<p class="figcap">${r.cap}</p>`:m.art+`<p class="figcap">${m.cap}</p>`}${m.html}<div class="act" id="act"><h3>Actividad breve</h3><p class="muted">Una pregunta de este módulo. Al elegir, se indica si es la de esta lectura y por qué.</p></div><p><button class="primary" type="button" id="next">${state.module<r.modules.length-1?"Siguiente módulo":"Ir al cuestionario"}</button></p>`;
+if(!p.modules)p.modules={};p.modules[m.id]=true;saveProg(state.reading,p);
+app.querySelectorAll("[data-mod]").forEach(b=>b.onclick=()=>{state.module=+b.dataset.mod;render()});
+document.getElementById("toQuiz").onclick=()=>{state.view="quiz";render()};
+document.getElementById("next").onclick=()=>{if(state.module<r.modules.length-1){state.module++;render()}else{state.view="quiz";render()}};
+const item=moduleActs[state.reading][state.module];const box=document.createElement("div");box.innerHTML=`<p>${item.q}</p><div class="opts"></div><div class="fb hidden"></div>`;
+item.opts.forEach((op,i)=>{const btn=document.createElement("button");btn.type="button";btn.textContent=op;btn.onclick=()=>{box.querySelectorAll("button").forEach(x=>x.disabled=true);const fb=box.querySelector(".fb");const ok=i===item.a;fb.className="fb "+(ok?"ok":"bad");fb.textContent=(ok?"Correcto. ":"No es esa. ")+item.why};box.querySelector(".opts").appendChild(btn)});
+document.getElementById("act").appendChild(box);
+}
+function renderQuiz(r,p){
+const app=document.getElementById("app");if(!p.quiz)p.quiz={answers:{},done:false};
+app.innerHTML=`<p class="muted">${r.title}</p><h1>Comprobación de comprensión</h1><p>Diez preguntas de esta lectura, entre opción múltiple y verdadero o falso.</p><div id="qs"></div><div id="score"></div>`;
+const qs=document.getElementById("qs");
+r.quiz.forEach((item,idx)=>{const box=document.createElement("div");box.className="q";const answered=p.quiz.answers[idx]!==undefined;box.innerHTML=`<p><strong>${idx+1}.</strong> ${item.q}</p><div class="opts"></div><div class="fb ${answered?"":"hidden"}"></div>`;const opts=item.t==="tf"?["Verdadero","Falso"]:item.opts;opts.forEach((op,i)=>{const btn=document.createElement("button");btn.type="button";btn.textContent=op;btn.disabled=answered;btn.onclick=()=>answer(idx,i,item,box);box.querySelector(".opts").appendChild(btn)});if(answered)showFb(box,item,p.quiz.answers[idx]);qs.appendChild(box)});
+if(p.quiz.done)showScore();
+function answer(idx,i,item,box){const val=item.t==="tf"?(i===0):i;p.quiz.answers[idx]=val;box.querySelectorAll("button").forEach(b=>b.disabled=true);showFb(box,item,val);if(Object.keys(p.quiz.answers).length===r.quiz.length){p.quiz.done=true;showScore()}saveProg(state.reading,p)}
+function showFb(box,item,val){const ok=val===item.a;const fb=box.querySelector(".fb");fb.className="fb "+(ok?"ok":"bad");fb.textContent=(ok?"Correcto. ":"Incorrecto. ")+item.why}
+function showScore(){const s=r.quiz.filter((item,idx)=>p.quiz.answers[idx]===item.a).length;document.getElementById("score").innerHTML=`<div class="card"><p class="score">${s} / ${r.quiz.length}</p><p>Puntaje de esta lectura. Reintentar borra solo estas respuestas.</p><button class="primary" type="button" id="retry">Reintentar</button></div>`;document.getElementById("retry").onclick=()=>{p.quiz={answers:{},done:false};saveProg(state.reading,p);render()}}
+}
+function openReading(id){state.reading=id;state.view="mod";state.module=0;render()}
+themeInit();render();
+</script>
+</body>
+</html>
